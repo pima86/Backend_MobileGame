@@ -1,0 +1,487 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine.EventSystems;
+using UnityEngine.UI;
+using UnityEngine;
+using TMPro;
+using BackEnd;
+using LitJson;
+
+public class Story_Talk : MonoBehaviour
+{
+    public static Story_Talk Inst { get; private set; }
+    void Awake() => Inst = this;
+
+    [SerializeField] private TMP_Text namebox;
+    [SerializeField] private TMP_Text Nicknamebox;
+    [SerializeField] private TMP_Text Nicknamelog;
+    [SerializeField] private TMP_Text talkbox;
+
+    [Header("Side_Butten")]
+    [SerializeField] GameObject Skipbox;
+
+    [Header("Box")]
+    [SerializeField] GameObject Buttenbox;
+    [SerializeField] GameObject Talkbox;
+    [SerializeField] GameObject Namebox;
+
+    [Header("npc 이미지")] 
+    [SerializeField] private GameObject[] npc;
+
+    private IEnumerator coroutine;
+    private Color Col = new Color(1f, 1f, 1f);
+    private Color BAW = new Color(120/255f, 120/255f, 120/255f);
+    private Npc npcSO;
+    private bool Talking = false;
+    private bool Touch_on = true;
+
+    private int talkid = 0;
+
+    private void Start()
+    {
+        Npc_Clear();
+    }
+
+    void Update()
+    {
+        if (Input.GetMouseButtonDown(0))
+        {
+            if (Touch_on && !EventSystem.current.IsPointerOverGameObject())
+            {
+                if (Story_Page.Inst.Get_Size() > 0 && !Buttenbox.activeSelf)
+                {
+                    if (Talking)
+                    {
+                        StopCoroutine(coroutine);
+                        talkbox.text = Story_Page.Inst.GetTalk(talkid-1, 7);
+
+                        Talking = false;
+                    }
+                    else
+                        Talk_Set();
+                }
+            }
+        }
+
+        if (leftright)
+            Face_right(npc_leftright);
+
+        if (surprise)
+            Face_surprise(npc_surprise);
+    }
+
+    public void Text_Set(int num) //해당 대본 불러오기
+    {
+        Story_Page.Inst.GenerateData(num);
+        talkid = 0;
+        Talk_Set();
+    }
+
+    void NPC_Set(string name1, string name2, string name3)
+    {
+        string[] name = { name1, name2, name3 };
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (name[i] != "")
+            {
+                npcSO = Story_Page.Inst.GetMember(name[i]);
+                Npc_already(i);
+                npc[i].SetActive(true);
+            }
+            else
+                Npc_Clear(i);
+        }
+    }
+
+    void Npc_already(int num)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            if (npcSO.body == npc[i].gameObject.GetComponent<SpriteRenderer>().sprite)
+            {
+                Vector2 pos = npc[num].transform.position;
+                npc[num].transform.position = npc[i].transform.position;
+                StartCoroutine(Npc_Move(num, pos));
+            }
+            else
+            {
+                npc[num].gameObject.GetComponent<SpriteRenderer>().sprite = npcSO.body;
+                //npc[num].gameObject.GetComponent<SpriteRenderer>().sprite = npcSO.face[0];
+            }
+        }
+    }
+
+    IEnumerator Npc_Move(int num, Vector2 pos)
+    {
+        while (npc[num].transform.position.x != pos.x)
+        {
+            npc[num].transform.position = Vector2.Lerp(npc[num].transform.position, pos, Time.deltaTime * 10);
+            yield return new WaitForSeconds(0.01f);
+        }
+    }
+
+    private Vector3 originPos_leftright;
+    private bool leftright = false;
+    private int npc_leftright;
+    private int npc_leftright_count = 0;
+    void Face_right(int num)
+    {
+        if (npc_leftright_count < 4)
+        {
+            if (npc_leftright_count == 0 || npc_leftright_count == 2)
+            {
+                if (originPos_leftright.x + 0.5f > npc[num].transform.position.x)
+                    npc[num].transform.position = npc[num].transform.position + new Vector3(0.5f, 0, 0) * Time.deltaTime * 100;
+                else
+                    npc_leftright_count++;
+            }
+            else if (npc_leftright_count == 1 || npc_leftright_count == 3)
+            {
+                if (originPos_leftright.x - 0.5f < npc[num].transform.position.x)
+                    npc[num].transform.position = npc[num].transform.position - new Vector3(0.5f, 0, 0) * Time.deltaTime * 100;
+                else
+                    npc_leftright_count++;
+            }
+        }
+        else
+        {
+            if (originPos_leftright.x < npc[num].transform.position.x)
+                npc[num].transform.position = npc[num].transform.position + new Vector3(0.5f, 0, 0) * Time.deltaTime * 100;
+            else
+            {
+                npc[num].transform.position = originPos_leftright;
+                leftright = false;
+                npc_leftright_count = 0;
+            }
+        }
+    }
+
+    private Vector3 originPos_surprise;
+    private bool surprise = false;
+    private int npc_surprise;
+    private int npc_surprise_count = 0;
+    void Face_surprise(int num) //캐릭터 상하 움직임
+    {
+        if (npc_surprise_count < 2)
+        {
+            if (originPos_surprise.y + 2 > npc[num].transform.position.y)
+                npc[num].transform.position = npc[num].transform.position + new Vector3(0, 1, 0) * Time.deltaTime * 100;
+            else
+                npc_surprise_count++;
+        }
+        else
+        {
+            npc[num].transform.position = originPos_surprise;
+            surprise = false;
+            npc_surprise_count = 0;
+        }
+    }
+
+    /* 그 뭐시기 언더테일 강아지마냥 부들부들거리기
+    IEnumerator Face_bouns(int num, float _amount, float _duration)
+    {
+        Vector3 originPos = npc[num].transform.position;
+
+        float timer = 0;
+        while (timer <= _duration)
+        {
+            npc[num].transform.localPosition = (Vector3)Random.insideUnitCircle * _amount + originPos;
+
+            timer += Time.deltaTime;
+            yield return null;
+        }
+        npc[num].transform.localPosition = originPos;
+    }
+    */
+
+    void Npc_Clear(int num = 10)
+    {
+        Skipbox.SetActive(true);
+
+        if (num < 3)
+        {
+            npc[num].gameObject.GetComponent<SpriteRenderer>().sprite = null;
+            npc[num].SetActive(false);
+        }
+        else
+        {
+            for (int i = 0; i < npc.Length; i++)
+            {
+                npc[i].gameObject.GetComponent<SpriteRenderer>().sprite = null;
+                npc[i].SetActive(false);
+            }
+        }
+    }
+
+    public void Butten_Talk()
+    {
+        Talk_Set();
+        Story_Auto.Inst.Select_Auto();
+        Buttenbox.SetActive(false);
+    }
+
+    public void Talk_Set()
+    {
+        string name1 = Story_Page.Inst.GetTalk(talkid, 0);
+        if (!name1.Contains("point"))
+        {
+            string name2 = Story_Page.Inst.GetTalk(talkid, 1);
+            string name3 = Story_Page.Inst.GetTalk(talkid, 2);
+
+            string option1 = Story_Page.Inst.GetTalk(talkid, 4);
+            string option2 = Story_Page.Inst.GetTalk(talkid, 5);
+            string option3 = Story_Page.Inst.GetTalk(talkid, 6);
+
+            /*
+            if (Story_Page.Inst.GetTalk_Size(talkid) >= 9)
+                //BGM넣기
+            if (Story_Page.Inst.GetTalk_Size(talkid) >= 10)
+                //SFX넣기
+            */
+            if (Story_Page.Inst.GetTalk_Size(talkid) >= 11) //CG넣기
+            {
+                string id = Story_Page.Inst.GetTalk(talkid, 10);
+                if(id.Contains("bg"))
+                    Story_Page.Inst.BG_Change(id);
+                else if(id.Contains("cg"))
+                    Story_Page.Inst.CG_Change(id);
+                Npc_Clear();
+            }
+            else
+                Story_Page.Inst.Bg_CG.SetActive(false);
+
+            NPC_Set(name1, name2, name3);
+
+
+            int npc_addrass = int.Parse(Story_Page.Inst.GetTalk(talkid, 3));
+            if (npc_addrass == 1)
+                namebox.text = name1;
+            else if (npc_addrass == 2)
+                namebox.text = name2;
+            else if (npc_addrass == 3)
+                namebox.text = name3;
+
+            if (Story_Page.Inst.GetTalk_Size(talkid) != 10)
+            {
+                Face_Set(name1, name2, name3, option1, option2, option3);
+
+                if (npc_addrass != 0)
+                    Face_color(npc_addrass - 1);
+                else
+                    Face_color(10);
+            }
+
+            string text = Story_Page.Inst.GetTalk(talkid, 7);
+            if (npc_addrass == 0)
+            {
+                Story_Auto.Inst.Select_Auto();
+                Buttenbox.SetActive(true);
+                Buttenbox.transform.Find("주인공대사").gameObject.GetComponent<TMP_Text>().text = text;
+            }
+            else if (npc_addrass == 4)
+            {
+                Touch_on = false;
+
+                Skipbox.SetActive(false);
+                Talkbox.SetActive(false);
+            }
+            else if (npc_addrass == 5)
+            {
+                Touch_on = true;
+
+                Skipbox.SetActive(true);
+                Talkbox.SetActive(true);
+
+                Story_Auto.Inst.Select_Auto();
+            }
+            else
+            {
+                coroutine = Typing(text, 0.05f);
+                StartCoroutine(coroutine);
+            }
+            talkid++;
+        }
+        else
+            Finish_Set(name1);
+    }
+
+    public void Skip()
+    {
+        while (!Story_Page.Inst.GetTalk(talkid, 0).Contains("point"))
+        {
+            talkid++;
+        }
+        Finish_Set(Story_Page.Inst.GetTalk(talkid, 0));
+    }
+
+    void Face_Set(string name1, string name2, string name3, string option1, string option2, string option3)
+    {
+        string[] name = { name1, name2, name3 };
+        string[] option = {option1, option2, option3};
+
+        for (int i = 0; i < 3; i++)
+        {
+            if (name[i] != null && name[i] != "")
+            {
+                npcSO = Story_Page.Inst.GetMember(name[i]);
+                Vector3 pos = npc[i].transform.position;
+
+
+                if (option[i].Contains("1"))
+                    npc[i].gameObject.GetComponent<SpriteRenderer>().sprite = npcSO.face[1];
+                if (option[i].Contains("2"))
+                    npc[i].gameObject.GetComponent<SpriteRenderer>().sprite = npcSO.face[2];
+                if (option[i].Contains("좌우"))
+                {
+                    originPos_leftright = npc[i].transform.position;
+                    npc_leftright = i;
+                    leftright = true;
+                }
+                if (option[i].Contains("놀람"))
+                {
+                    originPos_surprise = npc[i].transform.position;
+                    npc_surprise= i;
+                    surprise = true;
+                }
+                if (option[i] == "")
+                    npc[i].gameObject.GetComponent<SpriteRenderer>().sprite = npcSO.face[0];
+            }
+        }
+    }
+    
+
+    IEnumerator Typing(string message, float speed)
+    {
+        Talking = true;
+
+        for (int i = 0; i < message.Length; i++)
+        {
+            talkbox.text = message.Substring(0, i + 1);
+            yield return new WaitForSeconds(speed);
+        }
+
+        Story_Auto.Inst.Auto();
+        Talking = false;
+    }
+
+    bool Finish_Set(string name)
+    {
+        CameraMovement.Inst.gameObject.SetActive(true);
+        if (name.Contains("point"))
+        {
+            Npc_Clear();
+            //npc 스프라이트 정리
+            Story_Page.Inst.talkData.Clear();
+            //대본 클리어
+
+            Finish_chain(name);
+            //인게임 스토리로 연결할지
+
+            if (name == "point")
+                return false;
+
+            Story_Clear(name);
+            //첫 클리어인지
+
+            return false;
+        }
+
+        return true;
+    }
+
+    void Finish_chain(string name)
+    {
+        Player_UI.Inst.Set_Obj(true);
+
+        if (name == "point2")
+            Obj_Clear.Inst.GoTo_Screen("리그화면", false);
+    }
+
+    void Story_Clear(string name)
+    {
+        if (Story_Pointer.Inst.Point_Check(name) == 1)
+        {
+            StartCoroutine(Story_Pointer.Inst.Point_True_Set(name, true));
+            //Itembox.SetActive(true);
+            //Item_Get.Inst.Point_Clear(name);
+        }
+        else
+            Debug.Log("중복 클리어!");
+    }
+
+    void Face_color(int who)
+    {
+        for (int i = 0; i < npc.Length; i++)
+        {
+            if (i == who)
+            {
+                npc[i].GetComponent<SpriteRenderer>().color = Col;
+                npc[i].GetComponent<SpriteRenderer>().color = Col;
+            }
+            else
+            {
+                npc[i].GetComponent<SpriteRenderer>().color = BAW; //흑백으로 조정
+                npc[i].GetComponent<SpriteRenderer>().color = BAW; //흑백으로 조정
+            }
+        }
+    }
+
+    public void OnClickNameSave()
+    {
+        string name = Nicknamebox.text;
+        name = name.Substring(0, name.Length - 1);
+        if (!Name_Check(name))
+            return;
+
+        Story_Auto.Inst.Select_Auto();
+        Story_Page.Inst.Create_Name(name);
+
+        Nicknamebox.text = "";
+        Nicknamelog.text = "";
+        Namebox.SetActive(false);
+
+        Touch_on = true;
+        Talk_Set();
+    }
+
+    bool Name_Check(string name)
+    {
+        string try_name = name;
+        #region 욕 필터
+        string[] filter = { "애미", "시발", "새끼", "지랄", "애비", "느금마", "FUCK", "좆" };
+        #endregion
+
+        for (int i = 0; i < filter.Length; i++)
+        {
+            if (name.Contains(filter[i]))
+            {
+                Nicknamelog.text = "닉네임에 비속어를 포함하실 수 없습니다.";
+                return false;
+            }
+        }
+
+        if (name.Length < 2)
+        {
+            Nicknamelog.text = "닉네임은 최소 2글자 이상이어야 합니다.";
+            return false;
+        }
+
+        float TestInt = 0;
+        bool TestString = float.TryParse(try_name, out TestInt);
+        if (TestString)
+        {
+            Nicknamelog.text = "닉네임은 문자가 포함되어 있어야 합니다.";
+            return false;
+        }
+
+        BackendReturnObject bro = Backend.BMember.CheckNicknameDuplication(try_name);
+        if (!bro.IsSuccess())
+        {
+            Nicknamelog.text = "이미 해당 닉네임을 사용하고 있습니다.";
+            return false;
+        }
+
+        return true;
+    }
+}
