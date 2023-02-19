@@ -1,0 +1,278 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine.EventSystems;
+using UnityEngine;
+
+public class What_the_cat : MonoBehaviour
+{
+    public static What_the_cat Inst { get; private set; }
+    void Awake() => Inst = this;
+
+    [Header("npc")]
+    Red_Girl red;
+    Robot_car car;
+    Ground_Item g_item;
+    Evolution_Set evole;
+
+    [Header("point")]
+    [SerializeField] GameObject[] pointer;
+
+    [Header("sprite")]
+    [SerializeField] Sprite[] sprite;
+    [SerializeField] RuntimeAnimatorController[] anim;
+
+    [Header("타 스크립트 판단용 변수")]
+    public bool anim_play = false;
+    public bool event_click = false;
+    //애니메이션 중인지
+
+    #region private 변수
+    private Vector3 origin_pos;
+    private string text;
+    private int point = 0;
+    private float speed = 0.05f;
+    #endregion
+
+    
+    private void Update()
+    {
+        if (anim_play)
+            return;
+
+        if (Input.GetMouseButtonDown(0) && point > 0)
+        {
+            if (!EventSystem.current.IsPointerOverGameObject())
+            {
+                if (Talk_UI.Inst.txt.text == this.text && !event_click)
+                    StartCoroutine(Chapter());
+                else
+                    Talk_UI.Inst.click();
+            }
+        }
+    }
+
+    public void Play()
+    {
+        point = 1;
+        StartCoroutine(Chapter());
+    }
+
+    IEnumerator Step_Chapter()
+    {
+        CameraMovement.Inst.gameObject.SetActive(false);
+        Player_UI.Inst.Set_Obj(false);
+        UI_Off.Inst.Set_Main(false);
+        Talk_UI.Inst.now_story = "What_the_cat";
+        yield break;
+    }
+
+    public IEnumerator Chapter()
+    {
+        Talk_UI.Inst.close();
+        anim_play = true;
+        event_click = false;
+
+        if (point == 1)
+        {
+            yield return StartCoroutine(Step_Chapter());
+            GameObject obj = Instantiate(PrefabManager.Inst.red_girl, pointer[0].transform.position, transform.rotation, GameObject.Find("SceneManager").transform.Find("NPC").gameObject.transform);
+            red = obj.GetComponent<Red_Girl>();
+
+            yield return new WaitForSeconds(1f);
+            red.talk();
+
+            anim_play = false;
+            text = "Zzz";
+            Talk_UI.Inst.write(text, speed);
+        }
+        else if (point == 2)
+        {
+            red.npc_set(1);
+
+            anim_play = false;
+            text = "...!";
+            Talk_UI.Inst.write(text, speed);
+        }
+        else if (point == 3)
+        {
+            red.npc_set(4);
+
+            anim_play = false;
+            text = "깜빡 졸아버렸네요.";
+            Talk_UI.Inst.write(text, speed);
+        }
+        else if (point == 4)
+        {
+            red.npc_set(2);
+
+            anim_play = false;
+            text = "반가워요. 신입";
+            Talk_UI.Inst.write(text, speed);
+        }
+        else if (point == 5)
+        {
+            //웃는 스프라이트 준비하면 좋을 듯
+
+            anim_play = false;
+            text = "교육담당인 알파에요. 잘부탁드려요.";
+            Talk_UI.Inst.write(text, speed);
+        }
+        else if (point == 6)
+        {
+            event_click = true;
+
+            red.sprite.flipX = true;
+            red.npc_set(5);
+
+            GameObject obj = Instantiate(PrefabManager.Inst.robot_car, pointer[1].transform.position, transform.rotation, GameObject.Find("SceneManager").transform.Find("NPC").gameObject.transform);
+            car = obj.GetComponent<Robot_car>();
+
+            car.item_set(1);
+            car.npc_set(1);
+
+            car.Go(pointer[2].transform.position,8);
+            yield return new WaitForSeconds(2.5f);
+
+            red.sprite.flipX = false;
+            car.item_set(0);
+            yield return new WaitForSeconds(0.5f);
+            car.npc_set(0);
+
+            obj = Instantiate(PrefabManager.Inst.item, pointer[3].transform.position, transform.rotation, GameObject.Find("SceneManager").transform.Find("NPC").gameObject.transform);
+            g_item = obj.GetComponent<Ground_Item>();
+            g_item.Sprite_Change(sprite[1]);
+            g_item.Anim.runtimeAnimatorController = anim[0];
+            g_item.name = "알";
+
+            anim_play = false;
+            text = "알을 터치해보세요.";
+            Talk_UI.Inst.write(text, speed);
+        }
+        else if (point == 7)
+        {
+            //알 깨지고
+            g_item.npc_set(1);
+
+            yield return new WaitForSeconds(3.5f);
+
+            Destroy(g_item.gameObject);
+            GameObject obj = Instantiate(PrefabManager.Inst.item, pointer[3].transform.position, transform.rotation, GameObject.Find("SceneManager").transform.Find("NPC").gameObject.transform);
+            g_item = obj.GetComponent<Ground_Item>();
+            g_item.Sprite_Change(sprite[2]);
+            g_item.Anim.runtimeAnimatorController = anim[1];
+
+            anim_play = false;
+            text = "알에서 부화한 이 몬스터를 저희는 비트몬스터라고 불러요.";
+            Talk_UI.Inst.write(text, speed);
+        }
+        else if (point == 8)
+        {
+            anim_play = false;
+            text = "비트몬스터는 주변 환경에 따라 다양한 진화를 해요.";
+            Talk_UI.Inst.write(text, speed);
+        }
+        else if (point == 9)
+        {
+            anim_play = false;
+            text = "보여드리기위해 지금은 조금 시기를 앞당겨서...";
+            Talk_UI.Inst.write(text, speed);
+        }
+        else if (point == 10)
+        {
+            event_click = true;
+
+            //슬라임 진화하는 애니메이션
+            Destroy(g_item.gameObject);
+            GameObject obj = Instantiate(PrefabManager.Inst.evolution, pointer[3].transform.position, transform.rotation, GameObject.Find("SceneManager").transform.Find("NPC").gameObject.transform);
+            obj.GetComponent<Evolution_Set>().Sprite_set(sprite[2], sprite[3], 2);
+            evole = obj.GetComponent<Evolution_Set>();
+
+            anim_play = false;
+        }
+        else if (point == 11)
+        {
+            GameObject obj = Instantiate(PrefabManager.Inst.item, pointer[3].transform.position, transform.rotation, GameObject.Find("SceneManager").transform.Find("NPC").gameObject.transform);
+            g_item = obj.GetComponent<Ground_Item>();
+            g_item.Sprite_Change(sprite[3]);
+            g_item.Anim.runtimeAnimatorController = anim[2];
+
+            red.npc_set(2);
+
+            anim_play = false;
+            text = "어때요? 이외에도 다양한 루트들이 존재해요.";
+            Talk_UI.Inst.write(text, speed);
+        }
+        else if (point == 12)
+        {
+            Destroy(g_item.gameObject);
+            car.Filp_Change(true);
+            car.item_set(2);
+
+            yield return new WaitForSeconds(1f);
+
+            car.npc_set(1);
+            car.Go(pointer[1].transform.position, 8);
+
+            anim_play = false;
+            text = "현재 몬스터 리그가 관중으로부터 많은 관심을 받고 있어요.";
+            Talk_UI.Inst.write(text, speed);
+        }
+        else if (point == 13)
+        {
+            anim_play = false;
+            text = "회사는 챔피언십 리그의 우승을 목표로 당신을 고용했어요.";
+            Talk_UI.Inst.write(text, speed);
+        }
+        else if (point == 14)
+        {
+            red.npc_set(4);
+
+            anim_play = false;
+            text = "처음은 미미한 성과가 이어지시겠지만...";
+            Talk_UI.Inst.write(text, speed);
+        }
+        else if (point == 15)
+        {
+            red.npc_set(2);
+
+            anim_play = false;
+            text = "당신의 플레이를 응원해요.";
+            Talk_UI.Inst.write(text, speed);
+        }
+        else if (point == 16)
+        {
+            //걸어서 화면 밖으로
+            red.sprite.flipX = true;
+            red.npc_set(3);
+            red.Go(pointer[1].transform.position, 5);
+
+            yield return new WaitForSeconds(3f);
+
+            anim_play = false;
+            Final_turn();
+        }
+        point++;
+    }
+
+    public void Final_turn()
+    {
+        if (red)
+            Destroy(red.gameObject);
+        if (car)
+            Destroy(car.gameObject);
+        if (g_item)
+            Destroy(g_item.gameObject);
+        if (evole)
+            Destroy(evole.gameObject);
+
+        CameraMovement.Inst.gameObject.SetActive(true);
+        Obj_Clear.Inst.Step_fuction("육성화면", true);
+        Player_UI.Inst.Set_Obj(true);
+        UI_Off.Inst.Set_Main(true);
+        Get.Inst.My_mob_list_add("", "a1", 1);
+        Talk_UI.Inst.Clear();
+        point = 0;
+
+        StartCoroutine(Story_Pointer.Inst.Point_True_Set("point1", true));
+    }
+}
