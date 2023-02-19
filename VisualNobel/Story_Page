@@ -1,0 +1,101 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine.UI;
+using UnityEngine;
+using BackEnd;
+
+public class Story_Page : MonoBehaviour
+{
+    [SerializeField] public GameObject Bg_CG;
+    [SerializeField] private GameObject Bg;
+    [SerializeField] private NpcSO npcSO;
+    [SerializeField] private CGSO cgSO;
+    public Dictionary<int, string[]> talkData;
+
+    public static Story_Page Inst { get; private set; }
+    public List<Npc> npcList;
+
+    void Awake()
+    {
+        Inst = this;
+        talkData = new Dictionary<int, string[]>();
+    }
+
+    public void GenerateData(int addrass)
+    {
+        talkData.Clear();
+        npcList.Clear();
+        
+        if (addrass == 1)
+        {
+            BG_Change("기본");
+            //비주얼노벨 방식의 텍스트박스
+
+            //나태표정 기본, 웃음, 인상쓴
+            //폰
+            //아케디아표정 기본, 눈감은
+
+            talkData.Add(0, new string[] { "", "매니저", "", "2", "", "", "", "여긴 관계자 외 출입금지입니다." });
+            talkData.Add(1, new string[] { "", "매니저", "", "0", "", "", "", "자신을 소개한다." });
+            talkData.Add(2, new string[] { "", "매니저", "", "2", "", "", "놀람", "당신이 그 새로 입사하신..." });
+            talkData.Add(3, new string[] { "", "매니저", "", "2", "", "", "", "반가워요. 저에 대해서는 편하게 매니저라고 불러주세요." });
+            talkData.Add(4, new string[] { "", "매니저", "", "2", "", "", "", "앞으로 당신의 타이틀 매치 관련해서 도와드릴 예정이에요." });
+            talkData.Add(5, new string[] { "매니저", "", "", "1", "", "", "", "인지도가 높은 만큼 다양한 수준의 리그들이 개최되고 있어요. 그러니 처음 시작은 아마추어 리그를 추천드려요." });
+            //리그 게시판 그림
+            talkData.Add(6, new string[] { "매니저", "", "", "1", "", "", "", "아마추어 리그는 가장 인지도가 낮지만 참가자들의 수준이 낮은 편이라 지금의 목표로 하기 좋으실 거에요." });
+            talkData.Add(7, new string[] { "", "매니저", "", "2", "", "", "", "크게보면 그 위로 프리미엄 리그와 챔피언십 리그가 있습니다." });
+            talkData.Add(8, new string[] { "", "매니저", "", "2", "", "", "", "그리고 당연히 저희의 목표는 챔피언십 리그 내에서도 상대가 없을 절대적인 1등입니다!" });
+            talkData.Add(9, new string[] { "", "매니저", "", "2", "1", "", "", "그러니 잘부탁드립니다. 신입씨" });
+            talkData.Add(10, new string[] { "point2" });
+        }
+    }
+
+    public void BG_Change(string tag)
+    {
+        if (tag == "bg_null")
+        {
+            Bg.SetActive(false);
+            return;
+        }
+
+        Bg.SetActive(true);
+        CG cg = cgSO.CGs.Find(x => x.Tag == tag);
+        Bg.GetComponent<SpriteRenderer>().sprite = cg.img;
+    }
+
+    public void CG_Change(string tag)
+    {
+        CG cg = cgSO.CGs.Find(x => x.Tag == tag);
+        Bg_CG.SetActive(true);
+        Bg_CG.GetComponent<SpriteRenderer>().sprite = cg.img;
+    }
+
+    public Npc GetMember(string name)
+    {
+        Npc npc = new Npc();
+        npc = npcSO.npcs.Find(x => x.name == name);
+
+        return npc;
+    }
+
+    public string GetTalk(int id, int talkIndex) //Object의 id , string배열의 index
+    {
+        return talkData[id][talkIndex]; //해당 아이디의 해당
+    }
+
+    public int GetTalk_Size(int id) //Object의 id , string배열의 index
+    {
+        return talkData[id].Length; //해당 아이디의 해당
+    }
+
+    public int Get_Size() //Object의 id , string배열의 index
+    {
+        return talkData.Count; //해당 아이디의 해당
+    }
+
+    public void Create_Name(string name)
+    {
+        var bro = Backend.BMember.CreateNickname(name);
+        Debug.Log(bro);
+    }
+}
