@@ -1,0 +1,44 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+[System.Serializable]
+public class Mob
+{
+    [Header("개체 데이터")]
+    public string id; //개체 구분용 id
+    public string name; //이름
+    public string evolve; //진화단계
+    public string range; //사거리
+    public string att_speed; //공격속도
+    public string mov_speed; //이동속도
+
+    [Header("이미지")]
+    public Sprite sprite;
+    public RuntimeAnimatorController idle;
+    public RuntimeAnimatorController dead;
+
+    [Header("기본 능력치")]
+    public int hp; //공격력
+    public int ad_att; //물리 공격력
+    public int ap_att; //마법 공격력
+    public int ad_shi; //물리 방어력
+    public int ap_shi; //마법 방어력
+
+    [Header("성장 능력치")]
+    public int hp_up; //공격력
+    public int ad_att_up; //물리 공격력
+    public int ap_att_up; //마법 공격력
+    public int ad_shi_up; //물리 방어력
+    public int ap_shi_up; //마법 방어력
+
+    [Header("스킬")]
+    public string passive; //패시브
+    public string active; //스킬
+}
+
+[CreateAssetMenu(fileName = "MobSO", menuName = "Scriptable Object/MobSO")]
+public class MobSO : ScriptableObject
+{
+    public List<Mob> mobs; //퀘스트 목록
+}
